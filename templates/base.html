@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ settings.site_name if settings is defined else 'Starter Portfolio' }}{% if page_title %} | {{ page_title }}{% endif %}</title>
+    <meta name="description" content="{{ page_meta_description if page_meta_description else 'A simple creative portfolio.' }}">
+    <meta property="og:title" content="{{ settings.site_name if settings is defined else 'Starter Portfolio' }}{% if page_title %} | {{ page_title }}{% endif %}">
+    <meta property="og:description" content="{{ page_meta_description if page_meta_description else 'A simple creative portfolio.' }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:image" content="{{ og_image_link if og_image_link else '' }}">
+    <link rel="icon" type="image/x-icon" href="{{ static_url(request, 'assets/favicon.ico') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ static_url(request, 'css/styles.css') }}">
+    {% if is_edit_mode %}
+    <link rel="stylesheet" href="{{ static_url(request, 'css/edit-mode.css') }}">
+    {% endif %}
+  </head>
+  <body data-edit-mode="{{ 'true' if is_edit_mode else 'false' }}">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="site-header-inner">
+          <a class="site-brand" href="/">
+            <span class="site-brand-mark">Portfolio</span>
+            <span class="site-brand-name">{{ settings.owner_name if settings is defined else 'Alex Morgan' }}</span>
+          </a>
+          <nav class="site-nav">
+            <a href="/">Work</a>
+            <a href="/me">About</a>
+            {% if is_edit_mode %}
+            <button type="button" class="site-nav-button" data-open-create-project>New Project</button>
+            <button type="button" class="site-nav-button" data-open-about-editor>Edit About</button>
+            <a href="/edit/logout">Log out</a>
+            {% elif settings is defined and settings.contact_email %}
+            <a href="mailto:{{ settings.contact_email }}">Contact</a>
+            {% endif %}
+          </nav>
+        </div>
+      </header>
+
+      <main class="page-shell {% block page_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="site-footer">
+        <div class="site-footer-inner">
+          <p>{{ settings.tagline if settings is defined else 'A simple creative portfolio.' }}</p>
+          {% if settings is defined and settings.social_links_for_display %}
+          <ul class="footer-links">
+            {% for item in settings.social_links_for_display %}
+            <li><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.label }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </footer>
+    </div>
+
+    <script src="{{ static_url(request, 'build/public.js') }}" defer></script>
+    {% if is_edit_mode %}
+    <script src="{{ static_url(request, 'build/edit.js') }}" defer></script>
+    {% endif %}
+  </body>
+</html>
+

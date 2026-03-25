@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <rect width="1200" height="900" fill="#EEE8DB"/>
+  <rect x="116" y="90" width="968" height="720" rx="44" fill="#FBF7EF"/>
+  <path d="M322 210H876" stroke="#1F1A14" stroke-width="26" stroke-linecap="round"/>
+  <path d="M322 322H876" stroke="#AA764F" stroke-width="26" stroke-linecap="round"/>
+  <path d="M322 434H876" stroke="#1F1A14" stroke-width="26" stroke-linecap="round"/>
+  <path d="M322 546H728" stroke="#1F1A14" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="226" cy="214" r="24" fill="#D28357"/>
+  <circle cx="226" cy="326" r="24" fill="#E7C98D"/>
+  <circle cx="226" cy="438" r="24" fill="#D28357"/>
+  <text x="142" y="152" fill="#1F1A14" font-family="Georgia, serif" font-size="76">Process Notes</text>
+</svg>
+

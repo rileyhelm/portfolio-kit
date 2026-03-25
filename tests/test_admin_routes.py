@@ -1,0 +1,108 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from dependencies import COOKIE_NAME, sign_cookie
+
+
+def auth_client(client):
+  client.cookies.set(COOKIE_NAME, sign_cookie("editor"))
+  return client
+
+
+def test_admin_endpoints_require_auth(client) -> None:
+  response = client.post("/api/create-project", json={"slug": "blocked-project", "name": "Blocked Project"})
+  assert response.status_code == 403
+
+
+def test_create_project(client, content_dir: Path) -> None:
+  response = auth_client(client).post(
+    "/api/create-project",
+    json={
+      "slug": "sample-project",
+      "name": "Sample Project",
+      "date": "2026-01-01",
+      "draft": False,
+      "pinned": False,
+      "markdown": "Hello world",
+    },
+  )
+
+  assert response.status_code == 200
+  assert response.json()["slug"] == "sample-project"
+  saved_file = content_dir / "projects" / "sample-project.md"
+  assert saved_file.exists()
+  assert "name: Sample Project" in saved_file.read_text(encoding="utf-8")
+
+
+def test_save_project(client, content_dir: Path) -> None:
+  project_file = content_dir / "projects" / "sample-project.md"
+  project_file.write_text(
+    """---
+name: Sample Project
+slug: sample-project
+date: 2026-01-01
+draft: false
+pinned: false
+---
+
+Original text.
+""",
+    encoding="utf-8",
+  )
+
+  get_response = auth_client(client).get("/api/project/sample-project")
+  assert get_response.status_code == 200
+  revision = get_response.json()["revision"]
+
+  save_response = auth_client(client).post(
+    "/api/save-project",
+    json={
+      "slug": "sample-project",
+      "original_slug": "sample-project",
+      "name": "Sample Project Updated",
+      "date": "2026-01-01",
+      "draft": False,
+      "pinned": True,
+      "thumbnail": "/static/seed/project-studio/thumb.svg",
+      "youtube": "",
+      "og_image": "",
+      "markdown": "Updated text",
+      "base_revision": revision,
+    },
+  )
+
+  assert save_response.status_code == 200
+  saved = project_file.read_text(encoding="utf-8")
+  assert "name: Sample Project Updated" in saved
+  assert "pinned: true" in saved
+  assert "Updated text" in saved
+
+
+def test_save_about(client, content_dir: Path) -> None:
+  response = auth_client(client).get("/api/about")
+  assert response.status_code == 200
+  revision = response.json()["revision"]
+
+  save_response = auth_client(client).post(
+    "/api/save-about",
+    json={
+      "markdown": "Updated about text.",
+      "base_revision": revision,
+      "settings": {
+        "site_name": "Updated Site",
+        "owner_name": "Updated Owner",
+        "tagline": "Updated Tagline",
+        "about_photo": "/static/seed/about/profile.svg",
+        "contact_email": "hello@example.com",
+        "social_links": [{"label": "Email", "url": "mailto:hello@example.com"}],
+      },
+    },
+  )
+
+  assert save_response.status_code == 200
+  about_file = content_dir / "about.md"
+  settings_file = content_dir / "settings.json"
+  assert "Updated about text." in about_file.read_text(encoding="utf-8")
+  assert "Updated Site" in settings_file.read_text(encoding="utf-8")
+

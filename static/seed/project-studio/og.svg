@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#F6E7D5"/>
+  <circle cx="1048" cy="104" r="160" fill="#D17D49" opacity="0.22"/>
+  <rect x="96" y="96" width="1008" height="438" rx="40" fill="#FFF9F1"/>
+  <text x="132" y="232" fill="#1F1A14" font-family="Georgia, serif" font-size="92">Studio Refresh</text>
+  <text x="132" y="316" fill="#6E5A49" font-family="Arial, sans-serif" font-size="34">A sample portfolio project with YouTube and markdown content.</text>
+  <rect x="132" y="366" width="326" height="110" rx="24" fill="#D17D49"/>
+  <rect x="494" y="398" width="186" height="78" rx="18" fill="#E8C785"/>
+  <rect x="714" y="334" width="242" height="142" rx="26" fill="#2F2A24"/>
+</svg>
+

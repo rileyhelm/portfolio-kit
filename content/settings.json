@@ -1,0 +1,22 @@
+{
+  "site_name": "Starter Portfolio",
+  "owner_name": "Alex Morgan",
+  "tagline": "Designer, director, and visual storyteller based between client work and self-initiated projects.",
+  "about_photo": "/static/seed/about/profile.svg",
+  "contact_email": "hello@example.com",
+  "social_links": [
+    {
+      "label": "Instagram",
+      "url": "https://instagram.com/example"
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/in/example"
+    },
+    {
+      "label": "Email",
+      "url": "mailto:hello@example.com"
+    }
+  ]
+}
+

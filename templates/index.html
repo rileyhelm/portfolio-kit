@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block page_class %}page-home{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Selected Work</p>
+    <h1>{{ settings.owner_name }}</h1>
+    <p class="hero-text">{{ settings.tagline }}</p>
+  </div>
+</section>
+
+<section class="projects-grid-section">
+  {% if projects %}
+  <div class="projects-grid">
+    {% for project in projects %}
+    <article class="project-card" data-project-card>
+      <a class="project-card-link" href="/{{ project.slug }}">
+        <div class="project-card-media">
+          {% if project.thumbnail %}
+          <img src="{{ project.thumbnail }}" alt="" loading="lazy" decoding="async">
+          {% else %}
+          <div class="project-card-placeholder">No thumbnail</div>
+          {% endif %}
+          {% if project.draft %}
+          <span class="project-badge">Draft</span>
+          {% endif %}
+        </div>
+        <div class="project-card-copy">
+          <h2>{{ project.name }}</h2>
+          <p>{{ project.formatted_date }}</p>
+        </div>
+      </a>
+      {% if is_edit_mode %}
+      <div class="project-card-admin">
+        <button type="button" data-open-project-editor="{{ project.slug }}">Edit</button>
+        <button type="button" data-delete-project="{{ project.slug }}">Delete</button>
+      </div>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">No projects yet. Log in and create the first one.</p>
+  {% endif %}
+</section>
+{% endblock %}
+

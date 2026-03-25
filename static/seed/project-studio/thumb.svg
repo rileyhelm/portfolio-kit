@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <rect width="1200" height="900" fill="#F7EDE0"/>
+  <rect x="86" y="80" width="1028" height="740" rx="48" fill="#FFF9F0"/>
+  <circle cx="960" cy="200" r="150" fill="#CB7B46" opacity="0.3"/>
+  <path d="M180 680C280 500 420 410 620 410C790 410 930 496 1048 680" stroke="#2F2A24" stroke-width="28" stroke-linecap="round"/>
+  <rect x="270" y="228" width="288" height="188" rx="28" fill="#D98352"/>
+  <rect x="640" y="268" width="178" height="118" rx="22" fill="#E8C785"/>
+  <rect x="846" y="228" width="122" height="198" rx="28" fill="#2F2A24"/>
+  <text x="132" y="152" fill="#2F2A24" font-family="Georgia, serif" font-size="74">Studio Refresh</text>
+</svg>
+

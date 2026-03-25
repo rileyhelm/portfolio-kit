@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#F2E8DA"/>
+  <circle cx="1020" cy="126" r="150" fill="#D17B4D" opacity="0.24"/>
+  <text x="112" y="220" fill="#1F1A14" font-family="Georgia, serif" font-size="96">Motion Frames</text>
+  <text x="116" y="302" fill="#69584A" font-family="Arial, sans-serif" font-size="34">A seeded project showing ordinary card links and a dedicated page.</text>
+  <path d="M116 430L298 252L480 458L666 330L838 488L1020 248" stroke="#D17B4D" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
