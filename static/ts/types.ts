@@ -59,6 +59,6 @@ export interface AboutPayload {
   markdown: string;
   html: string;
   revision: string | null;
+  settings_revision: string | null;
   settings: SiteSettingsPayload;
 }
-

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  cacheDir: '/tmp/portfolio-cutdown-vitest',
+  cacheDir: '/tmp/portfolio-kit-vitest',
   test: {
     environment: 'jsdom',
     environmentOptions: {
@@ -14,4 +14,3 @@ export default defineConfig({
     restoreMocks: true,
   },
 });
-

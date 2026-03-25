@@ -16,6 +16,7 @@ from utils.content import (
     delete_project,
     get_about_file,
     get_projects_dir,
+    get_settings_file,
     load_about,
     load_project,
     load_settings,
@@ -120,7 +121,7 @@ async def save_project_endpoint(request: Request):
                 content={
                     "conflict": True,
                     "server_revision": current_revision,
-                    "server_markdown": current.markdown,
+                    "server_project": current.to_payload(),
                     "your_markdown": str(data.get("markdown", "")),
                     "message": "Content was modified by another session",
                 },
@@ -167,10 +168,12 @@ async def delete_project_endpoint(slug: str):
 async def get_about():
     html, markdown, revision = await asyncio.to_thread(load_about)
     settings = await asyncio.to_thread(load_settings)
+    settings_revision = await asyncio.to_thread(content_revision, get_settings_file())
     return {
         "html": html,
         "markdown": markdown,
         "revision": revision,
+        "settings_revision": settings_revision,
         "settings": settings.to_dict(),
     }
 
@@ -183,19 +186,42 @@ async def save_about_endpoint(request: Request):
 
     markdown_content = str(data.get("markdown", ""))
     base_revision = _normalize_text(data.get("base_revision"))
+    settings_base_revision = _normalize_text(data.get("settings_base_revision"))
 
-    if base_revision and not data.get("force"):
+    if not data.get("force"):
         current_revision = await asyncio.to_thread(content_revision, get_about_file())
-        if current_revision and current_revision != base_revision:
-            _html, server_markdown, _revision = await asyncio.to_thread(load_about)
+        current_settings_revision = await asyncio.to_thread(content_revision, get_settings_file())
+        about_conflict = base_revision and current_revision and current_revision != base_revision
+        settings_conflict = (
+            settings_base_revision
+            and current_settings_revision
+            and current_settings_revision != settings_base_revision
+        )
+        if about_conflict or settings_conflict:
+            html, server_markdown, _revision = await asyncio.to_thread(load_about)
+            settings = await asyncio.to_thread(load_settings)
+            message = "About page was modified by another session"
+            if settings_conflict:
+                message = "About settings were modified by another session"
+            if about_conflict and settings_conflict:
+                message = "About content and settings were modified by another session"
+
             return JSONResponse(
                 status_code=409,
                 content={
                     "conflict": True,
                     "server_revision": current_revision,
-                    "server_markdown": server_markdown,
+                    "server_settings_revision": current_settings_revision,
+                    "server_state": {
+                        "html": html,
+                        "markdown": server_markdown,
+                        "revision": current_revision,
+                        "settings_revision": current_settings_revision,
+                        "settings": settings.to_dict(),
+                    },
                     "your_markdown": markdown_content,
-                    "message": "About page was modified by another session",
+                    "your_settings": data.get("settings"),
+                    "message": message,
                 },
             )
 
@@ -207,25 +233,25 @@ async def save_about_endpoint(request: Request):
 
     _html, _markdown, revision = await asyncio.to_thread(save_about, markdown_content)
     settings = data.get("settings")
+    final_settings = old_settings
     if isinstance(settings, dict):
-        await asyncio.to_thread(save_settings, settings)
+        final_settings = await asyncio.to_thread(save_settings, settings)
 
     new_refs = extract_asset_urls(markdown_content)
-    if isinstance(settings, dict):
-        for candidate in (
-            _normalize_text(settings.get("about_photo")),
-            _normalize_text(settings.get("contact_email")),
-        ):
-            if candidate:
-                new_refs.add(candidate)
-        for item in settings.get("social_links", []):
-            if isinstance(item, dict):
-                maybe_url = _normalize_text(item.get("url"))
-                if maybe_url:
-                    new_refs.add(maybe_url)
+    for candidate in (
+        final_settings.about_photo,
+        final_settings.contact_email,
+    ):
+        if candidate:
+            new_refs.add(candidate)
+    for item in final_settings.social_links:
+        maybe_url = _normalize_text(item.get("url"))
+        if maybe_url:
+            new_refs.add(maybe_url)
 
     await asyncio.to_thread(cleanup_orphans, old_refs - new_refs)
-    return {"success": True, "revision": revision}
+    settings_revision = await asyncio.to_thread(content_revision, get_settings_file())
+    return {"success": True, "revision": revision, "settings_revision": settings_revision}
 
 
 @router.post("/render-markdown")

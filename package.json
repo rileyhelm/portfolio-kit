@@ -1,5 +1,5 @@
 {
-  "name": "portfolio-cutdown-frontend",
+  "name": "portfolio-kit-frontend",
   "private": true,
   "type": "module",
   "engines": {
@@ -17,4 +17,3 @@
     "vitest": "^4.0.4"
   }
 }
-

@@ -10,7 +10,7 @@ from fastapi import HTTPException, Request
 from utils.content import SiteSettings, load_settings
 
 
-COOKIE_NAME = "cutdown_edit"
+COOKIE_NAME = "portfolio_kit_edit"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 
 
@@ -103,4 +103,3 @@ def require_edit_mode(request: Request) -> None:
 
 def get_site_settings() -> SiteSettings:
     return load_settings()
-

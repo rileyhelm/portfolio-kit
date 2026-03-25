@@ -8,7 +8,7 @@ import {
   parseIntoBlocks,
   replaceBlock,
 } from './blocks';
-import type { Block, BlockType, ImageBlock, ProjectPayload, SiteSettingsPayload, TextBlock } from '../types';
+import type { AboutPayload, Block, BlockType, ImageBlock, ProjectPayload, SiteSettingsPayload, TextBlock } from '../types';
 
 type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
 
@@ -25,13 +25,14 @@ interface AboutDraft {
   markdown: string;
   blocks: Block[];
   revision: string | null;
+  settingsRevision: string | null;
   settings: SiteSettingsPayload;
 }
 
 type EditorState = ProjectDraft | AboutDraft;
 
 const EDIT_QUERY_KEY = 'edit';
-const SCROLL_STORAGE_KEY = 'cutdown-editor-scroll';
+const SCROLL_STORAGE_KEY = 'portfolio-kit-editor-scroll';
 const DRAFT_TITLE = 'New Project';
 
 const slashCommands: Array<{ type: BlockType; label: string; description: string }> = [
@@ -50,6 +51,8 @@ let saveTimer: number | null = null;
 let isHydrating = false;
 let activeSlashBlockId: string | null = null;
 let launcherEventsBound = false;
+let lastSavedSnapshot: string | null = null;
+let closeAfterSave = false;
 
 function getOverlayRoot(): HTMLElement {
   if (overlayRoot) {
@@ -78,7 +81,7 @@ function bindOverlayEvents(): void {
     const target = event.target as HTMLElement;
 
     if (target.closest('[data-editor-close]')) {
-      closeEditor();
+      await requestCloseEditor();
       return;
     }
 
@@ -328,6 +331,16 @@ function bindOverlayEvents(): void {
     }
   });
 
+  overlayRoot.addEventListener('paste', (event) => {
+    const file = imageFileFromClipboard(event);
+    if (!file) {
+      return;
+    }
+
+    event.preventDefault();
+    void handleClipboardImagePaste(file, event.target);
+  });
+
   overlayRoot.addEventListener('dragstart', (event) => {
     const target = event.target as HTMLElement;
     const block = target.closest<HTMLElement>('[data-draggable-block]');
@@ -335,7 +348,7 @@ function bindOverlayEvents(): void {
       return;
     }
     event.dataTransfer?.setData('text/plain', block.dataset.draggableBlock ?? '');
-    event.dataTransfer?.setData('application/x-cutdown-block', block.dataset.draggableBlock ?? '');
+    event.dataTransfer?.setData('application/x-portfolio-kit-block', block.dataset.draggableBlock ?? '');
   });
 
   overlayRoot.addEventListener('dragover', (event) => {
@@ -353,7 +366,7 @@ function bindOverlayEvents(): void {
     }
 
     event.preventDefault();
-    const sourceId = event.dataTransfer?.getData('application/x-cutdown-block') ?? '';
+    const sourceId = event.dataTransfer?.getData('application/x-portfolio-kit-block') ?? '';
     const targetId = block.dataset.draggableBlock ?? '';
     if (!sourceId || !targetId || sourceId === targetId) {
       return;
@@ -368,10 +381,25 @@ function bindOverlayEvents(): void {
   });
 
   window.addEventListener('beforeunload', (event) => {
-    if (saveStatus === 'dirty' || saveStatus === 'saving') {
+    if (hasUnsavedChanges() || saveStatus === 'saving') {
       event.preventDefault();
       event.returnValue = '';
     }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !isEditorVisible()) {
+      return;
+    }
+
+    if (activeSlashBlockId) {
+      event.preventDefault();
+      hideSlashMenu();
+      return;
+    }
+
+    event.preventDefault();
+    void requestCloseEditor();
   });
 }
 
@@ -430,7 +458,81 @@ function currentBlocks(): Block[] {
   return state.blocks;
 }
 
+function snapshotProject(project: ProjectPayload, blocks: Block[]): string {
+  return JSON.stringify({
+    mode: 'project',
+    slug: project.slug,
+    name: project.name,
+    date: project.date,
+    draft: project.draft,
+    pinned: project.pinned,
+    thumbnail: project.thumbnail,
+    youtube: project.youtube,
+    og_image: project.og_image,
+    markdown: blocksToMarkdown(blocks),
+  });
+}
+
+function snapshotSettings(settings: SiteSettingsPayload): SiteSettingsPayload {
+  return {
+    site_name: settings.site_name,
+    owner_name: settings.owner_name,
+    tagline: settings.tagline,
+    about_photo: settings.about_photo,
+    contact_email: settings.contact_email,
+    social_links: settings.social_links.map((item) => ({
+      label: item.label,
+      url: item.url,
+    })),
+  };
+}
+
+function currentSnapshot(): string | null {
+  if (!state) {
+    return null;
+  }
+
+  if (state.mode === 'project') {
+    return snapshotProject(state.project, state.blocks);
+  }
+
+  return JSON.stringify({
+    mode: 'about',
+    markdown: blocksToMarkdown(state.blocks),
+    settings: snapshotSettings(state.settings),
+  });
+}
+
+function rememberSavedSnapshot(): void {
+  lastSavedSnapshot = currentSnapshot();
+}
+
+function hasUnsavedChanges(): boolean {
+  const snapshot = currentSnapshot();
+  return snapshot !== null && snapshot !== lastSavedSnapshot;
+}
+
+function isEditorVisible(): boolean {
+  return Boolean(overlayRoot && !overlayRoot.classList.contains('hidden'));
+}
+
 function markDirty(): void {
+  if (!state) {
+    return;
+  }
+
+  if (!hasUnsavedChanges()) {
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    if (saveStatus !== 'saving') {
+      saveStatus = 'idle';
+    }
+    syncStatusChip();
+    return;
+  }
+
   if (saveStatus !== 'saving') {
     saveStatus = 'dirty';
   }
@@ -452,6 +554,18 @@ async function saveNow(force = false): Promise<void> {
     return;
   }
 
+  if (!force && !hasUnsavedChanges()) {
+    saveStatus = 'idle';
+    syncStatusChip();
+    return;
+  }
+
+  if (saveTimer) {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+
+  const snapshotBeforeSave = currentSnapshot();
   saveStatus = 'saving';
   syncStatusChip();
 
@@ -490,17 +604,32 @@ async function saveNow(force = false): Promise<void> {
           markdown: blocksToMarkdown(state.blocks),
           settings: state.settings,
           base_revision: state.revision,
+          settings_base_revision: state.settingsRevision,
           force,
         }),
         headers: { 'Content-Type': 'application/json' },
       }, true);
 
       state.revision = response.revision ?? state.revision;
+      state.settingsRevision = response.settings_revision ?? state.settingsRevision;
       updateEditQuery('about');
+    }
+
+    lastSavedSnapshot = snapshotBeforeSave;
+    if (hasUnsavedChanges()) {
+      saveStatus = 'dirty';
+      syncStatusChip();
+      scheduleSave();
+      return;
     }
 
     saveStatus = 'saved';
     syncStatusChip();
+    if (closeAfterSave) {
+      closeAfterSave = false;
+      closeEditorImmediately();
+      return;
+    }
     window.setTimeout(() => {
       if (saveStatus === 'saved') {
         saveStatus = 'idle';
@@ -509,25 +638,26 @@ async function saveNow(force = false): Promise<void> {
     }, 1600);
   } catch (error) {
     if (isConflictResponse(error)) {
+      const shouldCloseAfterResolve = closeAfterSave;
       saveStatus = 'conflict';
       syncStatusChip();
-      const overwrite = window.confirm('This content changed in another session. Press OK to overwrite with your version, or Cancel to reload the server version.');
+      const overwrite = window.confirm('This content changed in another session. Press OK to overwrite with your version, or Cancel to load the current server version.');
       if (overwrite) {
+        closeAfterSave = shouldCloseAfterResolve;
         await saveNow(true);
         return;
       }
 
+      closeAfterSave = false;
       if (state.mode === 'project') {
-        state.blocks = parseIntoBlocks(String(error.payload.server_markdown ?? ''));
-        state.revision = String(error.payload.server_revision ?? state.revision ?? '');
+        await reloadProjectFromServer(state.originalSlug ?? state.project.slug);
       } else {
-        state.blocks = parseIntoBlocks(String(error.payload.server_markdown ?? ''));
-        state.revision = String(error.payload.server_revision ?? state.revision ?? '');
+        await reloadAboutFromServer();
       }
-      render();
       return;
     }
 
+    closeAfterSave = false;
     saveStatus = 'error';
     syncStatusChip();
   }
@@ -933,9 +1063,29 @@ function updateEditQuery(value: string): void {
   window.history.replaceState(window.history.state, '', url.toString());
 }
 
-function closeEditor(): void {
+async function requestCloseEditor(): Promise<void> {
+  if (!state) {
+    closeEditorImmediately();
+    return;
+  }
+
+  if (!hasUnsavedChanges()) {
+    closeEditorImmediately();
+    return;
+  }
+
+  closeAfterSave = true;
+  if (saveStatus === 'saving') {
+    return;
+  }
+
+  await saveNow();
+}
+
+function closeEditorImmediately(): void {
   if (saveTimer) {
     window.clearTimeout(saveTimer);
+    saveTimer = null;
   }
   persistScrollPosition();
   updateEditQuery('');
@@ -943,7 +1093,36 @@ function closeEditor(): void {
   document.documentElement.classList.remove('editor-open');
   hideSlashMenu();
   state = null;
+  lastSavedSnapshot = null;
+  closeAfterSave = false;
   saveStatus = 'idle';
+}
+
+function applyProjectState(project: ProjectPayload): void {
+  state = {
+    mode: 'project',
+    project,
+    blocks: parseIntoBlocks(String(project.markdown ?? '')),
+    revision: project.revision ?? null,
+    originalSlug: project.slug,
+  };
+  rememberSavedSnapshot();
+  saveStatus = 'idle';
+  render();
+}
+
+function applyAboutState(payload: AboutPayload): void {
+  state = {
+    mode: 'about',
+    markdown: String(payload.markdown ?? ''),
+    blocks: parseIntoBlocks(String(payload.markdown ?? '')),
+    revision: payload.revision ?? null,
+    settingsRevision: payload.settings_revision ?? null,
+    settings: payload.settings,
+  };
+  rememberSavedSnapshot();
+  saveStatus = 'idle';
+  render();
 }
 
 function persistScrollPosition(): void {
@@ -1137,6 +1316,57 @@ async function pickAndUploadImage(
   });
 }
 
+function imageFileFromClipboard(event: Event & { clipboardData?: DataTransfer | null }): File | null {
+  const items = Array.from(event.clipboardData?.items ?? []);
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      return item.getAsFile();
+    }
+  }
+  return null;
+}
+
+function focusedBlockId(target: EventTarget | null): string | null {
+  const element = target instanceof HTMLElement
+    ? target
+    : (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  return element?.closest<HTMLElement>('[data-draggable-block]')?.dataset.draggableBlock ?? null;
+}
+
+function uploadedImageBlock(url: string, incoming?: Partial<ImageBlock>, current?: ImageBlock): ImageBlock {
+  const seed = current ?? createBlock('image');
+  return {
+    ...seed,
+    type: 'image',
+    src: url,
+    alt: current?.alt || (incoming?.alt ?? ''),
+    caption: current?.caption || (incoming?.caption ?? ''),
+    align: current?.align ?? ((incoming?.align as ImageBlock['align'] | undefined) ?? 'left'),
+    width: current?.width ?? Number(incoming?.width ?? 100),
+  };
+}
+
+async function handleClipboardImagePaste(file: File, target: EventTarget | null): Promise<void> {
+  const response = await uploadImageFile(file);
+  const activeBlockId = focusedBlockId(target);
+  const existing = activeBlockId ? currentBlocks().find((item) => item.id === activeBlockId) : null;
+
+  if (existing?.type === 'image') {
+    updateBlocks(
+      replaceBlock(currentBlocks(), existing.id, uploadedImageBlock(response.url, response.block, existing)),
+    );
+    return;
+  }
+
+  const blocks = currentBlocks();
+  const insertIndex = activeBlockId
+    ? Math.max(blocks.findIndex((item) => item.id === activeBlockId) + 1, 0)
+    : blocks.length;
+  const nextBlocks = [...blocks];
+  nextBlocks.splice(insertIndex, 0, uploadedImageBlock(response.url, response.block));
+  updateBlocks(nextBlocks);
+}
+
 async function uploadImageFile(file: File): Promise<{ url: string; block?: Partial<ImageBlock> }> {
   const formData = new FormData();
   formData.append('file', file);
@@ -1144,6 +1374,16 @@ async function uploadImageFile(file: File): Promise<{ url: string; block?: Parti
     method: 'POST',
     body: formData,
   });
+}
+
+async function reloadProjectFromServer(slug: string): Promise<void> {
+  const project = await requestJSON(`/api/project/${slug}`, { method: 'GET' });
+  applyProjectState(project as ProjectPayload);
+}
+
+async function reloadAboutFromServer(): Promise<void> {
+  const payload = await requestJSON('/api/about', { method: 'GET' });
+  applyAboutState(payload as AboutPayload);
 }
 
 function isConflictResponse(error: unknown): error is { payload: Record<string, unknown>; status: number } {
@@ -1169,20 +1409,11 @@ async function requestJSON(url: string, init: RequestInit, throwOnConflict = fal
 }
 
 async function openProjectEditor(slug: string): Promise<void> {
-  saveStatus = 'idle';
   const project = await requestJSON(`/api/project/${slug}`, { method: 'GET' });
-  state = {
-    mode: 'project',
-    project,
-    blocks: parseIntoBlocks(String(project.markdown ?? '')),
-    revision: project.revision ?? null,
-    originalSlug: project.slug,
-  };
-  render();
+  applyProjectState(project as ProjectPayload);
 }
 
 async function openCreateProject(): Promise<void> {
-  saveStatus = 'dirty';
   const today = new Date().toISOString().slice(0, 10);
   state = {
     mode: 'project',
@@ -1203,20 +1434,14 @@ async function openCreateProject(): Promise<void> {
     revision: null,
     originalSlug: null,
   };
+  rememberSavedSnapshot();
+  saveStatus = 'idle';
   render();
 }
 
 async function openAboutEditor(): Promise<void> {
-  saveStatus = 'idle';
   const payload = await requestJSON('/api/about', { method: 'GET' });
-  state = {
-    mode: 'about',
-    markdown: String(payload.markdown ?? ''),
-    blocks: parseIntoBlocks(String(payload.markdown ?? '')),
-    revision: payload.revision ?? null,
-    settings: payload.settings as SiteSettingsPayload,
-  };
-  render();
+  applyAboutState(payload as AboutPayload);
 }
 
 function openFromQueryParam(): void {
@@ -1240,6 +1465,26 @@ export function initEditMode(): void {
   bindLauncherEvents();
   getOverlayRoot();
   openFromQueryParam();
+}
+
+export function resetEditModeForTests(): void {
+  if (saveTimer) {
+    window.clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  textPreviewDebouncers.forEach((timer) => window.clearTimeout(timer));
+  textPreviewDebouncers.clear();
+  overlayRoot?.remove();
+  overlayRoot = null;
+  overlayScrollTarget = null;
+  state = null;
+  saveStatus = 'idle';
+  isHydrating = false;
+  activeSlashBlockId = null;
+  lastSavedSnapshot = null;
+  closeAfterSave = false;
+  document.documentElement.classList.remove('editor-open');
+  window.sessionStorage.removeItem(SCROLL_STORAGE_KEY);
 }
 
 if (typeof window !== 'undefined') {

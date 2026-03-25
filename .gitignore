@@ -1,8 +1,16 @@
 .DS_Store
 .env
+.coverage
+.python-version
+.ruff_cache/
+.mypy_cache/
 .pytest_cache/
 .venv/
 __pycache__/
+*.py[cod]
+coverage/
+dist/
 node_modules/
+*.tsbuildinfo
 static/build/
 static/uploads/images/
