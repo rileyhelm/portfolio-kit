@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 from io import BytesIO
-from typing import BinaryIO
 
 import boto3
 
@@ -84,26 +83,6 @@ def upload_bytes(
     return build_public_asset_url(key)
 
 
-def upload_fileobj(
-    fileobj: BinaryIO,
-    key: str,
-    content_type: str,
-    *,
-    cache_control: str = "public, max-age=31536000, immutable",
-) -> str:
-    s3 = get_s3_client()
-    s3.upload_fileobj(
-        fileobj,
-        get_s3_bucket(),
-        key,
-        ExtraArgs={
-            "ContentType": content_type,
-            "CacheControl": cache_control,
-        },
-    )
-    return build_public_asset_url(key)
-
-
 def delete_key(key: str) -> bool:
     if not is_s3_configured():
         return False
@@ -113,4 +92,3 @@ def delete_key(key: str) -> bool:
     except Exception:
         logger.exception("Failed to delete S3 key %s", key)
         return False
-

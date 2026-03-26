@@ -3,9 +3,7 @@ name: Process Notes
 slug: process-notes
 date: 2025-11-03
 draft: false
-pinned: false
 thumbnail: /static/seed/project-notes/thumb.svg
-og_image: /static/seed/project-notes/og.svg
 ---
 
 This example uses a static hero image instead of YouTube.
@@ -29,4 +27,3 @@ Write markdown
 Upload images
 Publish changes
 ```
-

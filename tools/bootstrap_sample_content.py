@@ -11,8 +11,8 @@ title: About
 Replace this sample copy with your own story, process, and contact details.
 """,
     "settings.json": """{
-  "site_name": "Starter Portfolio",
-  "owner_name": "Alex Morgan",
+  "site_name": "Riley Helm",
+  "owner_name": "Riley Helm",
   "tagline": "A simple creative portfolio.",
   "about_photo": "/static/seed/about/profile.svg",
   "contact_email": "hello@example.com",
@@ -20,6 +20,18 @@ Replace this sample copy with your own story, process, and contact details.
     {
       "label": "Instagram",
       "url": "https://instagram.com/example"
+    },
+    {
+      "label": "YouTube",
+      "url": "https://www.youtube.com/@example"
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/in/example"
+    },
+    {
+      "label": "TikTok",
+      "url": "https://www.tiktok.com/@example"
     }
   ]
 }

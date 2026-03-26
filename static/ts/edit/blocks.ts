@@ -1,6 +1,9 @@
-import type { Align, Block, BlockType, DividerBlock, ImageBlock, TextBlock } from '../types';
+import type { Align, Block, BlockType, DividerBlock, ImageBlock, RowBlock, RowChildBlock, TextBlock } from '../types';
 
 export const BLOCK_SEPARATOR = '<!-- block -->';
+export const ROW_START = '<!-- row -->';
+export const ROW_END = '<!-- /row -->';
+export const COL_SEPARATOR = '<!-- col -->';
 
 const FIGURE_PATTERN = /^<figure\s+class="portfolio-image(?:\s+align-(left|center|right))?"[^>]*>\s*<img\s+([^>]+?)>\s*(?:<figcaption>([\s\S]*?)<\/figcaption>)?\s*<\/figure>$/i;
 const WIDTH_PATTERN = /max-width:\s*(\d+)%/i;
@@ -60,14 +63,51 @@ function parseFigureBlock(markdown: string): ImageBlock | null {
   };
 }
 
+function parseSingleBlock(markdown: string): RowChildBlock {
+  const raw = markdown.trim();
+  if (/^(-{3,}|\*{3,}|_{3,})$/.test(raw)) {
+    return createBlock('divider');
+  }
+
+  const imageBlock = parseFigureBlock(raw);
+  if (imageBlock) {
+    return imageBlock;
+  }
+
+  return {
+    ...createBlock('text'),
+    markdown: raw,
+  };
+}
+
+function parseRowBlock(markdown: string): RowBlock | null {
+  const trimmed = markdown.trim();
+  if (!trimmed.startsWith(ROW_START) || !trimmed.endsWith(ROW_END)) {
+    return null;
+  }
+
+  const inner = trimmed
+    .slice(ROW_START.length, trimmed.length - ROW_END.length)
+    .trim();
+  const columns = inner.split(new RegExp(`\\n*${COL_SEPARATOR}\\n*`));
+  if (columns.length !== 2) {
+    return null;
+  }
+
+  return {
+    id: generateId('row'),
+    type: 'row',
+    left: parseSingleBlock(columns[0] ?? ''),
+    right: parseSingleBlock(columns[1] ?? ''),
+  };
+}
+
 export function createBlock<T extends BlockType>(type: T): Extract<Block, { type: T }> {
   if (type === 'text') {
     return {
       id: generateId('text'),
       type: 'text',
       markdown: '',
-      previewMode: 'split',
-      previewHtml: '',
     } as Extract<Block, { type: T }>;
   }
 
@@ -80,6 +120,15 @@ export function createBlock<T extends BlockType>(type: T): Extract<Block, { type
       caption: '',
       align: 'left',
       width: 100,
+    } as Extract<Block, { type: T }>;
+  }
+
+  if (type === 'row') {
+    return {
+      id: generateId('row'),
+      type: 'row',
+      left: createBlock('text'),
+      right: createBlock('text'),
     } as Extract<Block, { type: T }>;
   }
 
@@ -99,19 +148,11 @@ export function parseIntoBlocks(markdown: string): Block[] {
     .map((raw) => raw.trim())
     .filter(Boolean)
     .map((raw): Block => {
-      if (/^(-{3,}|\*{3,}|_{3,})$/.test(raw)) {
-        return createBlock('divider');
+      const rowBlock = parseRowBlock(raw);
+      if (rowBlock) {
+        return rowBlock;
       }
-
-      const imageBlock = parseFigureBlock(raw);
-      if (imageBlock) {
-        return imageBlock;
-      }
-
-      return {
-        ...createBlock('text'),
-        markdown: raw,
-      };
+      return parseSingleBlock(raw);
     });
 
   return blocks.length ? blocks : [createBlock('text')];
@@ -136,6 +177,15 @@ function imageBlockToMarkdown(block: ImageBlock): string {
 }
 
 export function blockToMarkdown(block: Block): string {
+  if (block.type === 'row') {
+    return [
+      ROW_START,
+      blockToMarkdown(block.left),
+      COL_SEPARATOR,
+      blockToMarkdown(block.right),
+      ROW_END,
+    ].join('\n');
+  }
   if (block.type === 'text') {
     return textBlockToMarkdown(block);
   }
@@ -152,8 +202,47 @@ export function blocksToMarkdown(blocks: Block[]): string {
     .join(`\n\n${BLOCK_SEPARATOR}\n\n`);
 }
 
+export function findBlock(blocks: Block[], blockId: string): Block | null {
+  for (const block of blocks) {
+    if (block.id === blockId) {
+      return block;
+    }
+    if (block.type === 'row') {
+      if (block.left.id === blockId) {
+        return block.left;
+      }
+      if (block.right.id === blockId) {
+        return block.right;
+      }
+    }
+  }
+  return null;
+}
+
 export function replaceBlock(blocks: Block[], blockId: string, nextBlock: Block): Block[] {
-  return blocks.map((block) => (block.id === blockId ? nextBlock : block));
+  return blocks.map((block) => {
+    if (block.id === blockId) {
+      return nextBlock;
+    }
+    if (block.type !== 'row') {
+      return block;
+    }
+
+    let changed = false;
+    let left = block.left;
+    let right = block.right;
+
+    if (block.left.id === blockId && nextBlock.type !== 'row') {
+      left = nextBlock;
+      changed = true;
+    }
+    if (block.right.id === blockId && nextBlock.type !== 'row') {
+      right = nextBlock;
+      changed = true;
+    }
+
+    return changed ? { ...block, left, right } : block;
+  });
 }
 
 export function moveBlock(blocks: Block[], fromIndex: number, toIndex: number): Block[] {
@@ -181,6 +270,14 @@ export function deleteBlock(blocks: Block[], blockId: string): Block[] {
 }
 
 export function cloneBlock(block: Block): Block {
+  if (block.type === 'row') {
+    return {
+      ...block,
+      id: generateId('row'),
+      left: cloneBlock(block.left) as RowChildBlock,
+      right: cloneBlock(block.right) as RowChildBlock,
+    };
+  }
   if (block.type === 'text') {
     return {
       ...block,

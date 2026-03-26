@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 BLOCK_SEPARATOR_PATTERN = re.compile(r"\n+\s*<!--\s*block\s*-->\s*\n+")
+ROW_MARKER_PATTERN = re.compile(r"<!--\s*/?(row|col)\s*-->")
 FIGURE_PATTERN = re.compile(
     r"^<figure\s+class=\"portfolio-image(?:\s+align-(left|center|right))?\"[^>]*>"
     r"\s*<img\s+([^>]+?)>\s*"
@@ -36,6 +37,12 @@ FIGURE_PATTERN = re.compile(
 )
 WIDTH_PATTERN = re.compile(r"max-width:\s*(\d+)%", re.IGNORECASE)
 YOUTUBE_DOMAINS = {"youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"}
+SUPPORTED_SOCIAL_PLATFORMS = (
+    ("instagram", "Instagram"),
+    ("youtube", "YouTube"),
+    ("linkedin", "LinkedIn"),
+    ("tiktok", "TikTok"),
+)
 
 _settings_lock = RLock()
 
@@ -93,6 +100,10 @@ def _is_external_url(url: str) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
+def _normalize_social_label(label: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (label or "").strip().lower())
+
+
 def _optimize_html(html: str) -> str:
     if not html:
         return ""
@@ -114,6 +125,30 @@ def _optimize_html(html: str) -> str:
     return str(soup)
 
 
+def _strip_layout_markers(markdown_content: str) -> str:
+    return ROW_MARKER_PATTERN.sub("", markdown_content or "")
+
+
+def _parse_row_block(markdown_block: str) -> tuple[str, str] | None:
+    stripped = (markdown_block or "").strip()
+    if not stripped:
+        return None
+    if not re.match(r"^\s*<!--\s*row\s*-->\s*", stripped):
+        return None
+    if not re.search(r"<!--\s*/row\s*-->\s*$", stripped):
+        return None
+
+    inner = re.sub(r"^\s*<!--\s*row\s*-->\s*", "", stripped, count=1)
+    inner = re.sub(r"\s*<!--\s*/row\s*-->\s*$", "", inner, count=1)
+    columns = re.split(r"\n*\s*<!--\s*col\s*-->\s*\n*", inner, maxsplit=1)
+    if len(columns) != 2:
+        return None
+
+    left_md = (columns[0] or "").strip()
+    right_md = (columns[1] or "").strip()
+    return left_md, right_md
+
+
 def markdown_to_html(markdown_content: str) -> str:
     blocks = [part for part in BLOCK_SEPARATOR_PATTERN.split(markdown_content or "") if part.strip()]
     if not blocks:
@@ -122,8 +157,27 @@ def markdown_to_html(markdown_content: str) -> str:
     renderer = _build_markdown_renderer()
     rendered: list[str] = []
     for block in blocks:
+        row_columns = _parse_row_block(block)
+        if row_columns:
+            left_markdown, right_markdown = row_columns
+
+            renderer.reset()
+            left_html = _optimize_html(renderer.convert(_strip_layout_markers(left_markdown))).strip()
+            renderer.reset()
+            right_html = _optimize_html(renderer.convert(_strip_layout_markers(right_markdown))).strip()
+
+            rendered.append(
+                '<div class="content-block content-block-row">'
+                '<div class="content-row">'
+                f'<div class="content-col content-col-left">{left_html}</div>'
+                f'<div class="content-col content-col-right">{right_html}</div>'
+                '</div>'
+                '</div>'
+            )
+            continue
+
         renderer.reset()
-        html = renderer.convert(block)
+        html = renderer.convert(_strip_layout_markers(block))
         html = _optimize_html(html).strip()
         if html:
             rendered.append(f'<div class="content-block">{html}</div>')
@@ -132,7 +186,7 @@ def markdown_to_html(markdown_content: str) -> str:
 
 def render_markdown_fragment(markdown_content: str) -> str:
     renderer = _build_markdown_renderer()
-    return _optimize_html(renderer.convert(markdown_content or "")).strip()
+    return _optimize_html(renderer.convert(_strip_layout_markers(markdown_content or ""))).strip()
 
 
 def _revision_from_content(content: str) -> str:
@@ -248,11 +302,20 @@ class SiteSettings:
     social_links: list[dict[str, str]]
 
     @property
-    def social_links_for_display(self) -> list[dict[str, str]]:
-        return [
-            {"label": item.get("label", "").strip(), "url": item.get("url", "").strip()}
+    def footer_social_links(self) -> list[dict[str, str]]:
+        links_by_platform = {
+            _normalize_social_label(item.get("label", "")): item.get("url", "").strip()
             for item in self.social_links
             if item.get("label", "").strip() and item.get("url", "").strip()
+        }
+        return [
+            {
+                "platform": platform,
+                "label": label,
+                "url": url,
+            }
+            for platform, label in SUPPORTED_SOCIAL_PLATFORMS
+            if (url := links_by_platform.get(platform))
         ]
 
     def to_dict(self) -> dict[str, Any]:
@@ -268,15 +331,16 @@ class SiteSettings:
 
 def default_settings() -> SiteSettings:
     return SiteSettings(
-        site_name="Starter Portfolio",
-        owner_name="Alex Morgan",
+        site_name="Riley Helm",
+        owner_name="Riley Helm",
         tagline="A simple portfolio for selected creative work.",
         about_photo="/static/seed/about/profile.svg",
         contact_email="hello@example.com",
         social_links=[
             {"label": "Instagram", "url": "https://instagram.com/example"},
+            {"label": "YouTube", "url": "https://www.youtube.com/@example"},
             {"label": "LinkedIn", "url": "https://www.linkedin.com/in/example"},
-            {"label": "Email", "url": "mailto:hello@example.com"},
+            {"label": "TikTok", "url": "https://www.tiktok.com/@example"},
         ],
     )
 
@@ -291,8 +355,8 @@ def load_settings() -> SiteSettings:
             raw = json.load(handle)
 
     return SiteSettings(
-        site_name=str(raw.get("site_name", "Starter Portfolio")),
-        owner_name=str(raw.get("owner_name", "Alex Morgan")),
+        site_name=str(raw.get("site_name", "Riley Helm")),
+        owner_name=str(raw.get("owner_name", "Riley Helm")),
         tagline=str(raw.get("tagline", "")),
         about_photo=_normalize_optional_str(raw.get("about_photo")),
         contact_email=_normalize_optional_str(raw.get("contact_email")),
@@ -309,8 +373,8 @@ def load_settings() -> SiteSettings:
 
 def save_settings(payload: dict[str, Any]) -> SiteSettings:
     settings = SiteSettings(
-        site_name=str(payload.get("site_name", "Starter Portfolio")).strip() or "Starter Portfolio",
-        owner_name=str(payload.get("owner_name", "Alex Morgan")).strip() or "Alex Morgan",
+        site_name=str(payload.get("site_name", "Riley Helm")).strip() or "Riley Helm",
+        owner_name=str(payload.get("owner_name", "Riley Helm")).strip() or "Riley Helm",
         tagline=str(payload.get("tagline", "")).strip(),
         about_photo=_normalize_optional_str(payload.get("about_photo")),
         contact_email=_normalize_optional_str(payload.get("contact_email")),
@@ -338,10 +402,8 @@ class Project:
     name: str
     date: str
     draft: bool
-    pinned: bool
     thumbnail: str | None
     youtube: str | None
-    og_image: str | None
     markdown: str
     html: str
     revision: str | None
@@ -361,7 +423,6 @@ class Project:
             "date": self.date,
             "formatted_date": self.formatted_date,
             "draft": self.draft,
-            "pinned": self.pinned,
             "thumbnail": self.thumbnail,
         }
 
@@ -371,10 +432,8 @@ class Project:
             "name": self.name,
             "date": self.date,
             "draft": self.draft,
-            "pinned": self.pinned,
             "thumbnail": self.thumbnail,
             "youtube": self.youtube,
-            "og_image": self.og_image,
             "markdown": self.markdown,
             "html": self.html,
             "revision": self.revision,
@@ -390,10 +449,8 @@ def _parse_project(path: Path, *, include_html: bool = True, include_revision: b
         name=str(frontmatter.get("name", path.stem)).strip() or path.stem,
         date=str(frontmatter.get("date", "")).strip(),
         draft=_resolve_bool(frontmatter.get("draft", False)),
-        pinned=_resolve_bool(frontmatter.get("pinned", False)),
         thumbnail=_normalize_optional_str(frontmatter.get("thumbnail")),
         youtube=_normalize_optional_str(frontmatter.get("youtube")),
-        og_image=_normalize_optional_str(frontmatter.get("og_image")),
         markdown=markdown_content.strip(),
         html=markdown_to_html(markdown_content.strip()) if include_html else "",
         revision=_revision_from_content(raw) if include_revision else None,
@@ -426,7 +483,6 @@ def load_projects(*, include_drafts: bool = False, include_html: bool = False, i
 
     projects.sort(
         key=lambda item: (
-            0 if item.pinned else 1,
             -_parse_iso_date(item.date).toordinal(),
             item.slug,
         )
@@ -446,10 +502,9 @@ def save_project(slug: str, frontmatter: dict[str, Any], markdown_content: str) 
         "slug": slug,
         "date": str(frontmatter.get("date", "")).strip(),
         "draft": _resolve_bool(frontmatter.get("draft", False)),
-        "pinned": _resolve_bool(frontmatter.get("pinned", False)),
     }
 
-    for field in ("thumbnail", "youtube", "og_image"):
+    for field in ("thumbnail", "youtube"):
         value = _normalize_optional_str(frontmatter.get(field))
         if value:
             payload[field] = value
@@ -492,8 +547,7 @@ def save_about(markdown_content: str) -> tuple[str, str, str | None]:
 
 
 def resolve_og_image(project: Project, request) -> str | None:
-    candidate = project.og_image or project.thumbnail
-    return absolute_url(request, candidate)
+    return absolute_url(request, project.thumbnail)
 
 
 def absolute_url(request, value: str | None) -> str | None:
@@ -541,4 +595,3 @@ def youtube_embed_url(url: str | None) -> str | None:
 
 def startup_sync_policy() -> str:
     return os.getenv("CONTENT_STARTUP_SYNC_POLICY", "always").strip().lower() or "always"
-

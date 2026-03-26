@@ -60,8 +60,9 @@ def create_app() -> FastAPI:
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         if exc.status_code == HTTP_404_NOT_FOUND:
             return templates.TemplateResponse(
-                "404.html",
-                {"request": request, "page_title": "Not Found", "is_edit_mode": False},
+                request=request,
+                name="404.html",
+                context={"request": request, "page_title": "Not Found", "is_edit_mode": False},
                 status_code=HTTP_404_NOT_FOUND,
             )
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
@@ -69,8 +70,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(500)
     async def server_error_handler(request: Request, _exc: Exception):
         return templates.TemplateResponse(
-            "500.html",
-            {"request": request, "page_title": "Error", "is_edit_mode": False},
+            request=request,
+            name="500.html",
+            context={"request": request, "page_title": "Error", "is_edit_mode": False},
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 

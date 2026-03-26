@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import mimetypes
 import re
 from pathlib import Path
 from urllib.parse import urlparse
@@ -170,8 +169,3 @@ def cleanup_orphans(urls: set[str]) -> list[str]:
             unregister_asset(url)
 
     return deleted
-
-
-def guess_content_type(filename: str) -> str:
-    return mimetypes.guess_type(filename)[0] or "application/octet-stream"
-

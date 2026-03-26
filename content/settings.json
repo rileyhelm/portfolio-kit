@@ -1,6 +1,6 @@
 {
-  "site_name": "Starter Portfolio",
-  "owner_name": "Alex Morgan",
+  "site_name": "Riley Helm",
+  "owner_name": "Riley Helm",
   "tagline": "Designer, director, and visual storyteller based between client work and self-initiated projects.",
   "about_photo": "/static/seed/about/profile.svg",
   "contact_email": "hello@example.com",
@@ -10,13 +10,16 @@
       "url": "https://instagram.com/example"
     },
     {
+      "label": "YouTube",
+      "url": "https://www.youtube.com/@example"
+    },
+    {
       "label": "LinkedIn",
       "url": "https://www.linkedin.com/in/example"
     },
     {
-      "label": "Email",
-      "url": "mailto:hello@example.com"
+      "label": "TikTok",
+      "url": "https://www.tiktok.com/@example"
     }
   ]
 }
-

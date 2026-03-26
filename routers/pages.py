@@ -38,7 +38,7 @@ def _base_context(request: Request) -> dict:
 async def home(request: Request):
     context = _base_context(request)
     context["projects"] = [project.to_card() for project in load_projects(include_drafts=is_edit_mode(request))]
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(request=request, name="index.html", context=context)
 
 
 @router.get("/about", include_in_schema=False)
@@ -57,7 +57,7 @@ async def about(request: Request):
             "page_meta_description": f"About {context['settings'].owner_name}",
         }
     )
-    return templates.TemplateResponse("about.html", context)
+    return templates.TemplateResponse(request=request, name="about.html", context=context)
 
 
 @router.get("/{slug}", response_class=HTMLResponse)
@@ -76,5 +76,4 @@ async def project_detail(request: Request, slug: str):
             "og_image_link": resolve_og_image(project, request),
         }
     )
-    return templates.TemplateResponse("project.html", context)
-
+    return templates.TemplateResponse(request=request, name="project.html", context=context)

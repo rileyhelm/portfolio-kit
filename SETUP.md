@@ -28,6 +28,8 @@ npm run build
 uv run uvicorn main:app --reload --port 8001
 ```
 
+Prefer `uv run ...` over calling `uvicorn` directly from an activated shell. It keeps the command pinned to this project's managed Python environment.
+
 6. Confirm:
    - `/`
    - a sample project page

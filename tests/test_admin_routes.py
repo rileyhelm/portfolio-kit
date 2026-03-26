@@ -23,7 +23,6 @@ def test_create_project(client, content_dir: Path) -> None:
       "name": "Sample Project",
       "date": "2026-01-01",
       "draft": False,
-      "pinned": False,
       "markdown": "Hello world",
     },
   )
@@ -43,7 +42,6 @@ name: Sample Project
 slug: sample-project
 date: 2026-01-01
 draft: false
-pinned: false
 ---
 
 Original text.
@@ -63,10 +61,8 @@ Original text.
       "name": "Sample Project Updated",
       "date": "2026-01-01",
       "draft": False,
-      "pinned": True,
       "thumbnail": "/static/seed/project-studio/thumb.svg",
       "youtube": "",
-      "og_image": "",
       "markdown": "Updated text",
       "base_revision": revision,
     },
@@ -75,7 +71,6 @@ Original text.
   assert save_response.status_code == 200
   saved = project_file.read_text(encoding="utf-8")
   assert "name: Sample Project Updated" in saved
-  assert "pinned: true" in saved
   assert "Updated text" in saved
 
 
@@ -118,7 +113,6 @@ name: Sample Project
 slug: sample-project
 date: 2026-01-01
 draft: false
-pinned: false
 ---
 
 Original text.
@@ -133,7 +127,6 @@ name: Renamed On Server
 slug: sample-project
 date: 2026-01-01
 draft: false
-pinned: true
 thumbnail: /static/server-thumb.svg
 ---
 
@@ -150,7 +143,6 @@ Server text.
       "name": "Local Draft",
       "date": "2026-01-01",
       "draft": False,
-      "pinned": False,
       "markdown": "Local text",
       "base_revision": revision,
     },
@@ -160,7 +152,6 @@ Server text.
   payload = response.json()
   assert payload["conflict"] is True
   assert payload["server_project"]["name"] == "Renamed On Server"
-  assert payload["server_project"]["pinned"] is True
   assert payload["server_project"]["thumbnail"] == "/static/server-thumb.svg"
   assert payload["server_project"]["markdown"] == "Server text."
 
@@ -208,3 +199,66 @@ def test_save_about_detects_settings_conflict(client, content_dir: Path) -> None
   assert payload["server_state"]["settings"]["site_name"] == "Server Updated Site"
   assert payload["server_state"]["settings"]["about_photo"] == "/static/server-photo.svg"
   assert payload["server_settings_revision"]
+
+
+def test_edit_nav_shows_contextual_action_only(client, content_dir: Path) -> None:
+  project_file = content_dir / "projects" / "sample-project.md"
+  project_file.write_text(
+    """---
+name: Sample Project
+slug: sample-project
+date: 2026-01-01
+draft: false
+---
+
+Project body.
+""",
+    encoding="utf-8",
+  )
+
+  home_response = auth_client(client).get("/")
+  assert home_response.status_code == 200
+  assert "New Project" in home_response.text
+  assert "data-open-about-editor" not in home_response.text
+  assert 'href="/sample-project?edit=1"' in home_response.text
+  assert 'data-open-project-editor="sample-project"' not in home_response.text
+  assert 'data-delete-project="sample-project"' not in home_response.text
+
+  about_response = auth_client(client).get("/me")
+  assert about_response.status_code == 200
+  assert "data-open-about-editor" in about_response.text
+  assert ">Edit</button>" in about_response.text
+  assert "New Project" not in about_response.text
+
+  project_response = auth_client(client).get("/sample-project")
+  assert project_response.status_code == 200
+  assert "New Project" not in project_response.text
+  assert "data-open-about-editor" not in project_response.text
+
+
+def test_footer_renders_supported_social_icons_only(client, content_dir: Path) -> None:
+  settings_file = content_dir / "settings.json"
+  settings_file.write_text(
+    """{
+  "site_name": "Test Portfolio",
+  "owner_name": "Test Owner",
+  "tagline": "Testing",
+  "about_photo": null,
+  "contact_email": null,
+  "social_links": [
+    {"label": "Instagram", "url": "https://instagram.com/test"},
+    {"label": "YouTube", "url": "https://www.youtube.com/@test"},
+    {"label": "Email", "url": "mailto:test@example.com"}
+  ]
+}
+""",
+    encoding="utf-8",
+  )
+
+  response = client.get("/")
+
+  assert response.status_code == 200
+  assert 'aria-label="Instagram"' in response.text
+  assert 'aria-label="YouTube"' in response.text
+  assert 'aria-label="Email"' not in response.text
+  assert '>Instagram<' not in response.text

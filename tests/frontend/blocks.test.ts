@@ -36,5 +36,35 @@ describe('edit blocks', () => {
     expect(serialized).toContain('<figcaption>Caption text</figcaption>');
     expect(serialized).toContain('---');
   });
-});
 
+  it('parses and serializes row blocks with two child blocks', () => {
+    const markdown = [
+      '<!-- row -->',
+      'Left column copy.',
+      '<!-- col -->',
+      '<figure class="portfolio-image align-right">',
+      '<img src="/static/column.svg" alt="Column image" style="max-width:64%;">',
+      '</figure>',
+      '<!-- /row -->',
+    ].join('\n');
+
+    const blocks = parseIntoBlocks(markdown);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]?.type).toBe('row');
+
+    if (blocks[0]?.type === 'row') {
+      expect(blocks[0].left.type).toBe('text');
+      expect(blocks[0].right.type).toBe('image');
+      if (blocks[0].right.type === 'image') {
+        expect(blocks[0].right.align).toBe('right');
+        expect(blocks[0].right.width).toBe(64);
+      }
+    }
+
+    const serialized = blocksToMarkdown(blocks);
+    expect(serialized).toContain('<!-- row -->');
+    expect(serialized).toContain('<!-- col -->');
+    expect(serialized).toContain('Left column copy.');
+    expect(serialized).toContain('portfolio-image align-right');
+  });
+});

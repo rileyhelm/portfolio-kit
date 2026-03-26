@@ -67,10 +67,9 @@ def _build_project_frontmatter(data: dict[str, Any], slug: str) -> dict[str, Any
         "slug": slug,
         "date": str(data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))).strip(),
         "draft": bool(data.get("draft", False)),
-        "pinned": bool(data.get("pinned", False)),
     }
 
-    for field in ("thumbnail", "youtube", "og_image"):
+    for field in ("thumbnail", "youtube"):
         value = _normalize_text(data.get(field))
         if value:
             payload[field] = value
@@ -128,7 +127,7 @@ async def save_project_endpoint(request: Request):
             )
 
     old_refs = extract_asset_urls(current.markdown)
-    for field in (current.thumbnail, current.og_image):
+    for field in (current.thumbnail,):
         if field:
             old_refs.add(field)
 
@@ -140,7 +139,7 @@ async def save_project_endpoint(request: Request):
         await asyncio.to_thread(delete_project, original_slug)
 
     new_refs = extract_asset_urls(markdown_content)
-    for field in (project.thumbnail, project.og_image):
+    for field in (project.thumbnail,):
         if field:
             new_refs.add(field)
     await asyncio.to_thread(cleanup_orphans, old_refs - new_refs)
@@ -155,7 +154,7 @@ async def delete_project_endpoint(slug: str):
         raise HTTPException(status_code=404, detail="Project not found")
 
     refs = extract_asset_urls(project.markdown)
-    for field in (project.thumbnail, project.og_image):
+    for field in (project.thumbnail,):
         if field:
             refs.add(field)
 

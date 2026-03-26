@@ -23,10 +23,8 @@ Projects live in `content/projects/*.md` with frontmatter:
 - `slug`
 - `date`
 - `draft`
-- `pinned`
 - `thumbnail`
 - `youtube`
-- `og_image`
 
 About page:
 - `content/about.md`

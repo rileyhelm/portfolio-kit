@@ -41,6 +41,8 @@ npm run build
 uv run uvicorn main:app --reload --port 8001
 ```
 
+Prefer `uv run ...` over invoking `uvicorn` directly from an activated shell. It ensures the project uses the managed Python 3.12 environment and installed dependencies from this repo.
+
 6. Open `/`, `/me`, and `/edit/login`.
 
 If you want remote edits and uploaded images to survive deploys, also set the S3/CDN variables from `.env.example`.
@@ -77,10 +79,8 @@ name: Project Title
 slug: project-title
 date: 2026-01-01
 draft: false
-pinned: false
 thumbnail: /static/seed/project-one/thumb.svg
 youtube: https://www.youtube.com/watch?v=...
-og_image: /static/seed/project-one/og.svg
 ---
 ```
 

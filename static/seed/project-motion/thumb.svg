@@ -4,6 +4,4 @@
   <circle cx="974" cy="676" r="154" fill="#2D2B29" opacity="0.15"/>
   <path d="M148 690C276 512 438 420 606 420C804 420 958 548 1048 690" stroke="#2D2B29" stroke-width="28" stroke-linecap="round"/>
   <path d="M228 544L430 264L652 564L844 336L982 544" stroke="#D17B4D" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="134" y="152" fill="#1F1A14" font-family="Georgia, serif" font-size="76">Motion Frames</text>
 </svg>
-

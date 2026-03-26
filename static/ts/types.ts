@@ -1,6 +1,5 @@
-export type BlockType = 'text' | 'image' | 'divider';
+export type BlockType = 'text' | 'image' | 'divider' | 'row';
 export type Align = 'left' | 'center' | 'right';
-export type TextPreviewMode = 'split' | 'edit' | 'preview';
 
 interface BaseBlock {
   id: string;
@@ -10,8 +9,6 @@ interface BaseBlock {
 export interface TextBlock extends BaseBlock {
   type: 'text';
   markdown: string;
-  previewMode?: TextPreviewMode;
-  previewHtml?: string;
 }
 
 export interface ImageBlock extends BaseBlock {
@@ -27,17 +24,23 @@ export interface DividerBlock extends BaseBlock {
   type: 'divider';
 }
 
-export type Block = TextBlock | ImageBlock | DividerBlock;
+export type RowChildBlock = TextBlock | ImageBlock | DividerBlock;
+
+export interface RowBlock extends BaseBlock {
+  type: 'row';
+  left: RowChildBlock;
+  right: RowChildBlock;
+}
+
+export type Block = RowChildBlock | RowBlock;
 
 export interface ProjectPayload {
   slug: string;
   name: string;
   date: string;
   draft: boolean;
-  pinned: boolean;
   thumbnail: string | null;
   youtube: string | null;
-  og_image: string | null;
   markdown: string;
   html: string;
   revision: string | null;
