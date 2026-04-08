@@ -1,25 +1,25 @@
 {
   "site_name": "Riley Helm",
   "owner_name": "Riley Helm",
-  "tagline": "Designer, director, and visual storyteller based between client work and self-initiated projects.",
-  "about_photo": "/static/seed/about/profile.svg",
-  "contact_email": "hello@example.com",
+  "tagline": "Writer, director, animator, and I can install a door in about 8 hours",
+  "about_photo": "/static/uploads/images/20260408-041129-251956.webp",
+  "contact_email": "riley@rileyhelm.com",
   "social_links": [
     {
       "label": "Instagram",
-      "url": "https://instagram.com/example"
+      "url": "https://www.instagram.com/rynotdry/"
     },
     {
       "label": "YouTube",
-      "url": "https://www.youtube.com/@example"
+      "url": "https://www.youtube.com/@rileyhelmfilms"
     },
     {
       "label": "LinkedIn",
-      "url": "https://www.linkedin.com/in/example"
+      "url": "https://www.linkedin.com/in/riley-helm"
     },
     {
       "label": "TikTok",
-      "url": "https://www.tiktok.com/@example"
+      "url": "https://www.tiktok.com/@talkingpillowcartoons"
     }
   ]
 }

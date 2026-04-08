@@ -2,14 +2,12 @@
 title: About
 ---
 
-I make image-led work for brands, publications, and personal projects. The publishing workflow here is intentionally direct: write in markdown, add images, publish, and move on.
+Riley Helm is a comedy writer-director based in Los Angeles. 
 
-The sample content is here to be replaced quickly. Swap in your own projects, update the about photo, and adjust the colors or typography if you want the site to feel more like you.
+He's been told he's "pretty funny." 
 
-You can also use normal markdown features here:
+Riley grew up in Freeport, the jewel of(and teenage pregnancy capital) of northwestern Illinois. He avoided the temptation of fatherhood and graduated from the University of Southern California in the 21st century. He now writes, directs, and animates stuff. 
 
-- short lists
-- links like [this one](https://example.com)
-- quotes, code blocks, and inline HTML when needed
+Winner of the A-List 30-minute Script Competition ([featured in THR](https://www.hollywoodreporter.com/movies/movie-news/a-list-competition-reveals-2020s-best-assistant-written-scripts-1280589/) - wow must be a big deal), Riley has also been honored in the finals, semifinals, and quarterfinals of competitions by Final Draft, ScreenCraft, The Script Lab, and had his debut short film selected at LA Shorts International Film Festival.
 
-> The goal is a portfolio that stays easy to understand six months from now.
+He hasn't entered any contests recently because they're basically a scam, he's pretty sure.

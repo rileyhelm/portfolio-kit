@@ -1,6 +1,37 @@
 {
   "version": 1,
-  "assets": {},
-  "hash_index": {}
+  "assets": {
+    "/static/uploads/images/20260408-032459-057983.webp": {
+      "hash": "sha256:85cbca58481bc01e74bfbfd8a8671d9fb1b77895883722ef877bb411fd0dddbf",
+      "storage_key": null,
+      "size": 52164
+    },
+    "/static/uploads/images/20260408-032958-128074.webp": {
+      "hash": "sha256:6134cc0f6fc499c72201d1c47a64c46cfb4595219bf421effb5a81277af03561",
+      "storage_key": null,
+      "size": 44730
+    },
+    "/static/uploads/images/20260408-033824-274890.webp": {
+      "hash": "sha256:423aa3ece8395aab4696c7ed226f3a1737b2131c5c86be4c4a1fe12b113b1704",
+      "storage_key": null,
+      "size": 106840
+    },
+    "/static/uploads/images/20260408-035146-732001.webp": {
+      "hash": "sha256:0249a94fed6217133b923d15dbcc2e5389e5be889c83e53b6fd4fb886898a25e",
+      "storage_key": null,
+      "size": 70782
+    },
+    "/static/uploads/images/20260408-041129-251956.webp": {
+      "hash": "sha256:64f909c78252ed74a529102c52ebabf4ba466a92c13bb765651764de597c718c",
+      "storage_key": null,
+      "size": 332928
+    }
+  },
+  "hash_index": {
+    "sha256:85cbca58481bc01e74bfbfd8a8671d9fb1b77895883722ef877bb411fd0dddbf": "/static/uploads/images/20260408-032459-057983.webp",
+    "sha256:6134cc0f6fc499c72201d1c47a64c46cfb4595219bf421effb5a81277af03561": "/static/uploads/images/20260408-032958-128074.webp",
+    "sha256:423aa3ece8395aab4696c7ed226f3a1737b2131c5c86be4c4a1fe12b113b1704": "/static/uploads/images/20260408-033824-274890.webp",
+    "sha256:0249a94fed6217133b923d15dbcc2e5389e5be889c83e53b6fd4fb886898a25e": "/static/uploads/images/20260408-035146-732001.webp",
+    "sha256:64f909c78252ed74a529102c52ebabf4ba466a92c13bb765651764de597c718c": "/static/uploads/images/20260408-041129-251956.webp"
+  }
 }
-
